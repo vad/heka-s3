@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/AdRoll/goamz/aws"
 	"github.com/AdRoll/goamz/s3"
-	"github.com/mozilla-services/heka/message"
 	. "github.com/mozilla-services/heka/pipeline"
 	"io"
 	"os"
@@ -80,9 +79,9 @@ func (so *S3Output) Run(or OutputRunner, h PluginHelper) (err error) {
 	midnightTicker := midnightTickerUpdate()
 
 	var (
-		pack *PipelinePack
-		msg  *message.Message
-		ok   = true
+		pack     *PipelinePack
+		outBytes []byte
+		ok       = true
 	)
 
 	for ok {
@@ -91,8 +90,14 @@ func (so *S3Output) Run(or OutputRunner, h PluginHelper) (err error) {
 			if !ok {
 				break
 			}
-			msg = pack.Message
-			err := so.WriteToBuffer(buffer, msg, or)
+
+			var err error
+
+			if outBytes, err = or.Encode(pack); err != nil {
+				or.LogError(fmt.Errorf("Error encoding message: %s", err))
+			} else if outBytes != nil {
+				err = so.WriteToBuffer(buffer, outBytes, or)
+			}
 			if err != nil {
 				or.LogMessage(fmt.Sprintf("Warning, unable to write to buffer: %s", err))
 				err = nil
@@ -127,8 +132,8 @@ func (so *S3Output) Run(or OutputRunner, h PluginHelper) (err error) {
 	return
 }
 
-func (so *S3Output) WriteToBuffer(buffer *bytes.Buffer, msg *message.Message, or OutputRunner) (err error) {
-	_, err = buffer.Write([]byte(msg.GetPayload()))
+func (so *S3Output) WriteToBuffer(buffer *bytes.Buffer, outBytes []byte, or OutputRunner) (err error) {
+	_, err = buffer.Write(outBytes)
 	if err != nil {
 		return
 	}
@@ -166,13 +171,13 @@ func (so *S3Output) SaveToDisk(buffer *bytes.Buffer, or OutputRunner) (err error
 	if err != nil {
 		return
 	}
+	defer f.Close()
 
 	_, err = f.Write(buffer.Bytes())
 	if err != nil {
 		return
 	}
 
-	f.Close()
 	buffer.Reset()
 
 	return
@@ -199,6 +204,7 @@ func (so *S3Output) ReadFromDisk(or OutputRunner) (buffer *bytes.Buffer, err err
 	if err != nil {
 		return
 	}
+	defer fi.Close()
 
 	r := bufio.NewReader(fi)
 	buffer = bytes.NewBuffer(nil)
@@ -218,7 +224,6 @@ func (so *S3Output) ReadFromDisk(or OutputRunner) (buffer *bytes.Buffer, err err
 		}
 	}
 
-	fi.Close()
 	return buffer, err
 }
 
