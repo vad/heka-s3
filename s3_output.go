@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/AdRoll/goamz/aws"
-	"github.com/AdRoll/goamz/s3"
+	"github.com/crowdmob/goamz/aws"
+	"github.com/crowdmob/goamz/s3"
 	. "github.com/mozilla-services/heka/pipeline"
 	"io"
 	"os"
@@ -103,7 +103,7 @@ func (so *S3Output) Run(or OutputRunner, h PluginHelper) (err error) {
 				err = nil
 				continue
 			}
-			pack.Recycle(nil)
+			pack.Recycle()
 		case <-tickerChan:
 			or.LogMessage(fmt.Sprintf("Ticker fired, uploading payload."))
 			err := so.Upload(buffer, or, false)
