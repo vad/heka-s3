@@ -269,8 +269,9 @@ func (so *S3Output) Upload(buffer *bytes.Buffer, or OutputRunner, isMidnight boo
 
 	or.LogMessage("Upload finished, removing buffer file on disk.")
 	if err == nil {
-		or.LogMessage(fmt.Sprintf("Cannot remove file '%s' from disk", so.bufferFilePath))
 		err = os.Remove(so.bufferFilePath)
+	} else {
+		or.LogMessage("Error putting to S3 bucket")
 	}
 
 	return
