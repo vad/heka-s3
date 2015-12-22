@@ -236,11 +236,13 @@ func (so *S3Output) Upload(buffer *bytes.Buffer, or OutputRunner, isMidnight boo
 
 	err = so.SaveToDisk(buffer, or)
 	if err != nil {
+		or.LogMessage("Cannot save to disk")
 		return
 	}
 
 	buffer, err = so.ReadFromDisk(or)
 	if err != nil {
+		or.LogMessage("Cannot read from disk")
 		return
 	}
 
@@ -267,6 +269,7 @@ func (so *S3Output) Upload(buffer *bytes.Buffer, or OutputRunner, isMidnight boo
 
 	or.LogMessage("Upload finished, removing buffer file on disk.")
 	if err == nil {
+		or.LogMessage(fmt.Sprintf("Cannot remove file '%s' from disk", so.bufferFilePath))
 		err = os.Remove(so.bufferFilePath)
 	}
 
